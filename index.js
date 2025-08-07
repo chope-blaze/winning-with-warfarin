@@ -1,4 +1,6 @@
 import 'react-native-gesture-handler';
+import { OPENAI_API_KEY } from '@env';
+
 
 import { registerRootComponent } from 'expo';
 import App from './App';

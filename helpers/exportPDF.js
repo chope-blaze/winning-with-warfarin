@@ -2,6 +2,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
+import { OPENAI_API_KEY } from '@env';
 
 export const exportAllAnalysisToPDF = async (items, patientName = '') => {
   try {

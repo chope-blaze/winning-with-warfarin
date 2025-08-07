@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { OPENAI_API_KEY } from '@env';
 
 export async function shareAnalysis(text) {
   try {

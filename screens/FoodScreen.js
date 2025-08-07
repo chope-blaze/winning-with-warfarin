@@ -1,3 +1,5 @@
+
+import { OPENAI_API_KEY } from '@env';
 import React, { useState, useEffect } from 'react';
 import {
   View,
