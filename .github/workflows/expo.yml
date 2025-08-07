@@ -1,0 +1,31 @@
+name: Expo Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: 🧪 Install dependencies
+        run: npm install
+
+      - name: 🚀 Install Expo CLI
+        run: npm install -g expo-cli
+
+      - name: 🔍 Check for lint and build errors
+        run: |
+          npx expo install
+          npx expo doctor
