@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { OPENAI_API_KEY } from '@env';
 
 export const getTodayMeals = async () => {
   try {

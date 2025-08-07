@@ -1,137 +1,130 @@
-import * as Print from 'expo-print';
-import { StyleSheet } from 'react-native';
 
-import * as Sharing from 'expo-sharing';
-import { Asset } from 'expo-asset';
-import * as FileSystem from 'expo-file-system';
-import * as MediaLibrary from 'expo-media-library';
-import { ToastAndroid, Platform, Alert } from 'react-native';
+// screens/INRScreen.js
+import React, { useEffect, useState } from 'react';
+import {
+  View, Text, TextInput, Button, StyleSheet,
+  Alert, FlatList, TouchableOpacity, ScrollView
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import { exportAllAnalysisToPDF } from '../helpers/exportPDF';
+import { VictoryLine, VictoryChart, VictoryTheme } from 'victory-native';
 
-export const exportAllAnalysisToPDF = async (items, patientName = '') => {
-  try {
-    const groupedByMonth = items.reduce((acc, item) => {
-      const date = new Date(item.timestamp);
-      const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
-      if (!acc[month]) acc[month] = [];
-      acc[month].push(item);
-      return acc;
-    }, {});
+export default function INRScreen() {
+  const [inr, setInr] = useState('');
+  const [analysis, setAnalysis] = useState('');
+  const [history, setHistory] = useState([]);
+  const [patientName, setPatientName] = useState('John Doe');
+  const navigation = useNavigation();
 
-    const points = items.map((item, index) => {
-      const x = index * 40;
-      const y = 200 - ((item.inr - 1.5) / (4.0 - 1.5)) * 180;
-      return `${x},${y}`;
-    });
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
-    const chartSvg = `
-      <svg width="100%" height="220">
-        <line x1="0" y1="0" x2="100%" y2="0" stroke="#ccc" stroke-dasharray="4" />
-        <polyline fill="none" stroke="#007AFF" stroke-width="2" points="${points.join(' ')}" />
-        ${points.map((p, i) => `<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="3" fill="#007AFF" />`).join('')}
-      </svg>
-    `;
+  const loadHistory = async () => {
+    const keys = await AsyncStorage.getAllKeys();
+    const items = await AsyncStorage.multiGet(keys.filter(k => k.startsWith('inrAnalysis-')));
+    const parsed = items.map(([_, v]) => JSON.parse(v));
+    parsed.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    setHistory(parsed);
+  };
 
-    const logoAsset = Asset.fromModule(require('../assets/logo.png'));
-    await logoAsset.downloadAsync();
-    const logoBase64 = await FileSystem.readAsStringAsync(logoAsset.localUri || '', { encoding: FileSystem.EncodingType.Base64 });
-    const logoImg = `<img src="data:image/png;base64,${logoBase64}" style="height:80px;margin-bottom:10px" />`;
-
-    const summarySection = `
-      <div style="margin-top: 20px;">
-        <h3>Summary</h3>
-        <ul>
-          <li>Total Readings: ${items.length}</li>
-          <li>Average INR: ${(items.reduce((sum, i) => sum + i.inr, 0) / items.length).toFixed(2)}</li>
-          <li>Last Reading: ${items[items.length - 1]?.inr || 'N/A'}</li>
-        </ul>
-      </div>
-    `;
-
-    const html = `
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; font-size: 16px; line-height: 1.4; }
-            h1, h2 { text-align: center; color: #d32f2f; }
-            h3 { margin-top: 30px; color: #333; }
-            .month-section { margin-top: 20px; }
-            .entry { margin-bottom: 10px; }
-            .chart { margin: 20px 0; text-align: center; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #ccc; padding: 8px; font-size: 14px; }
-            th { background-color: #f0f0f0; }
-            .signature { margin-top: 40px; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .tagline { color: #c62828; font-size: 16px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            ${logoImg}
-            <h1>Winning With Warfarin</h1>
-            <p class="tagline">Balance your blood. Master your meals.</p>
-          </div>
-
-          <h2>INR Analysis Report</h2>
-          <h3>Patient: ${patientName || 'N/A'}</h3>
-
-          ${summarySection}
-
-          <div class="chart">
-            <h3>INR Trend Over Time</h3>
-            ${chartSvg}
-          </div>
-
-          ${Object.entries(groupedByMonth).map(([month, entries]) => `
-            <div class="month-section">
-              <h3>${month}</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date & Time</th>
-                    <th>INR</th>
-                    <th>Analysis Summary</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${entries.map(item => `
-                    <tr>
-                      <td>${new Date(item.timestamp).toLocaleString()}</td>
-                      <td>${item.inr}</td>
-                      <td>${item.text.replace(/\n/g, '<br/>')}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          `).join('')}
-
-          <div class="signature">
-            <p><strong>Doctor's Notes:</strong></p>
-            <p>__________________________________________</p>
-            <br/>
-            <p><strong>Doctor's Signature:</strong></p>
-            <p>__________________________________________</p>
-          </div>
-        </body>
-      </html>
-    `;
-
-    const safeName = patientName.replace(/\s+/g, '_') || 'INR_Report';
-    const fileName = `${FileSystem.documentDirectory}${safeName}.pdf`;
-    const { uri } = await Print.printToFileAsync({ html, fileName });
-    await Sharing.shareAsync(uri);
-
-    if (Platform.OS === 'android') {
-      const permission = await MediaLibrary.requestPermissionsAsync();
-      if (permission.granted) {
-        const asset = await MediaLibrary.createAssetAsync(uri);
-        await MediaLibrary.createAlbumAsync('INR Reports', asset, false);
-        ToastAndroid.show('PDF saved to INR Reports folder!', ToastAndroid.SHORT);
-      }
+  const logINR = async () => {
+    if (!inr || !analysis) {
+      Alert.alert('Please enter both INR and analysis');
+      return;
     }
-  } catch (error) {
-    console.error('Error exporting to PDF:', error);
-    alert('Failed to export PDF.');
-  }
-};
+    const timestamp = new Date().toISOString();
+    const entry = { inr: parseFloat(inr), text: analysis, timestamp };
+    await AsyncStorage.setItem(`inrAnalysis-${timestamp}`, JSON.stringify(entry));
+    setInr('');
+    setAnalysis('');
+    loadHistory();
+  };
+
+  const deleteEntry = async (timestamp) => {
+    await AsyncStorage.removeItem(`inrAnalysis-${timestamp}`);
+    loadHistory();
+  };
+
+  const handleExport = () => {
+    exportAllAnalysisToPDF(history, patientName);
+  };
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.label}>Patient Name</Text>
+      <TextInput value={patientName} onChangeText={setPatientName} style={styles.input} />
+
+      <Text style={styles.label}>INR Value</Text>
+      <TextInput keyboardType="decimal-pad" value={inr} onChangeText={setInr} style={styles.input} />
+
+      <Text style={styles.label}>Analysis Summary</Text>
+      <TextInput
+        value={analysis}
+        onChangeText={setAnalysis}
+        style={styles.textArea}
+        multiline
+        numberOfLines={4}
+      />
+
+      <Button title="Log INR" onPress={logINR} />
+      <View style={styles.spacer} />
+      <Button title="View Full INR Chart" onPress={() => navigation.navigate('Chart')} />
+      <View style={styles.spacer} />
+      <Button title="Export PDF Report" onPress={handleExport} />
+
+      {history.length > 0 && (
+        <>
+          <Text style={styles.label}>INR Trend (Preview)</Text>
+          <VictoryChart theme={VictoryTheme.material} scale={{ x: "time" }}>
+            <VictoryLine
+              data={history.map((h) => ({ x: new Date(h.timestamp), y: h.inr }))}
+              interpolation="monotoneX"
+              style={{ data: { stroke: '#007AFF' } }}
+            />
+          </VictoryChart>
+        </>
+      )}
+
+      <Text style={styles.label}>Recent Readings</Text>
+      <View style={{ flexGrow: 1 }}>
+        <FlatList
+          data={history}
+          keyExtractor={(item) => item.timestamp}
+          renderItem={({ item }) => (
+            <View style={styles.entry}>
+              <Text style={{ flex: 1 }}>
+                {new Date(item.timestamp).toLocaleString()} — INR: {item.inr}
+              </Text>
+              <TouchableOpacity onPress={() => deleteEntry(item.timestamp)}>
+                <Text style={styles.delete}>🗑️</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { padding: 20 },
+  label: { fontWeight: 'bold', marginTop: 15 },
+  input: { borderWidth: 1, padding: 10, borderRadius: 5, marginTop: 5 },
+  textArea: { borderWidth: 1, padding: 10, borderRadius: 5, marginTop: 5, height: 80 },
+  entry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    borderBottomWidth: 0.5,
+    borderColor: '#ccc',
+    paddingBottom: 5,
+  },
+  delete: {
+    marginLeft: 10,
+    fontSize: 18,
+    color: 'red',
+  },
+  spacer: { height: 10 },
+});

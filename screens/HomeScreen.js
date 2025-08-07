@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { OPENAI_API_KEY } from '@env';
 
 export default function HomeScreen() {
   return (

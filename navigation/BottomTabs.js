@@ -1,6 +1,7 @@
 // navigation/BottomTabs.js
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import OpenAITestScreen from '../screens/OpenAITestScreen'; // adjust the path if needed
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,7 +42,7 @@ export default function BottomTabs() {
       <Tab.Screen name="INR" component={INRScreen} />
       <Tab.Screen name="Food" component={FoodScreen} />
       <Tab.Screen name="History" component={AnalysisHistoryScreen} />
-      <Tab.Screen name="More" component={MoreScreen} />
+<Tab.Screen name="More" component={OpenAITestScreen} />
     </Tab.Navigator>
   );
 }
