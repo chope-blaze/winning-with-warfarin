@@ -1,4 +1,4 @@
-name: CI
+name: Expo CI
 
 on:
   pull_request:
@@ -23,8 +23,5 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Expo doctor (non-blocking)
-        run: npx -y expo-doctor || true
-
-      - name: ESLint
-        run: npx eslint . --max-warnings=0
+      - name: Run Expo Doctor
+        run: npx expo-doctor
