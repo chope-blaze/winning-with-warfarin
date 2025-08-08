@@ -1,31 +1,27 @@
-name: Expo Build
+name: Expo CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
 
 jobs:
-  build:
+  lint-and-doctor:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: ⚙️ Set up Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: npm
 
-      - name: 🧪 Install dependencies
-        run: npm install
+      - name: Install deps
+        run: npm ci
 
-      - name: 🚀 Install Expo CLI
-        run: npm install -g expo-cli
-
-      - name: 🔍 Check for lint and build errors
-        run: |
-          npx expo install
-          npx expo doctor
+      - name: Run Expo Doctor
+        run: npx expo-doctor
