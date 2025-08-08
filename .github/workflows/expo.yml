@@ -1,34 +1,27 @@
-name: CI
+name: Expo CI
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
+    branches: [ main ]
+  push:
     branches: [ main ]
 
 jobs:
-  build:
+  lint-and-doctor:
     runs-on: ubuntu-latest
 
     steps:
-      - name: ⬇️ Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🟢 Set up Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: 📦 Install dependencies
+      - name: Install deps
         run: npm ci
 
-      # Run Expo Doctor, but don't fail the whole job.
-      - name: 🩺 Expo Doctor (non-blocking)
+      - name: Run Expo Doctor
         run: npx expo-doctor
-        continue-on-error: true
-
-      # Optional: run eslint but don't fail the job
-      - name: 🔎 Lint (non-blocking)
-        run: npx eslint .
-        continue-on-error: true
